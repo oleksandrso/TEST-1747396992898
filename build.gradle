@@ -1,0 +1,88 @@
+plugins {
+    id 'java-library'
+    id 'io.qameta.allure' version '2.11.2'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+def allureVersion = "2.24.0",
+    selenideVersion = "7.0.2",
+    junitVersion = "5.10.1"
+
+allure {
+    report {
+        version.set(allureVersion)
+    }
+    adapter {
+        aspectjWeaver.set(true)
+        frameworks {
+            junit5 {
+                adapterVersion.set(allureVersion)
+            }
+        }
+    }
+}
+
+dependencies {
+    testImplementation(
+            "org.aspectj:aspectjweaver:1.9.21",
+            "com.codeborne:selenide:$selenideVersion",
+            "io.qameta.allure:allure-selenide:$allureVersion",
+            "io.rest-assured:rest-assured:5.3.2",
+            "io.qameta.allure:allure-rest-assured:$allureVersion",
+            "org.aeonbits.owner:owner:1.0.12",
+            "org.assertj:assertj-core:3.24.2",
+            "org.slf4j:slf4j-simple:2.0.9",
+            "org.junit.jupiter:junit-jupiter:$junitVersion")
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+tasks.withType(Test) {
+    systemProperties(System.getProperties())
+    useJUnitPlatform()
+//--------------------------------------------------------------------------------------->For parallel tests
+    if (System.getProperty("threads") != null && System.getProperty("threads") != 0) {
+        systemProperties += [
+                'junit.jupiter.execution.parallel.enabled'                 : true,
+                'junit.jupiter.execution.parallel.mode.default'            : 'concurrent',
+                'junit.jupiter.execution.parallel.mode.classes.default'    : 'concurrent',
+                'junit.jupiter.execution.parallel.config.strategy'         : 'fixed',
+                'junit.jupiter.execution.parallel.config.fixed.parallelism': System.getProperty("threads").toInteger()
+        ]
+    }
+//--------------------------------------------------------------------------------------->Short logging for tests
+    testLogging {
+        lifecycle {
+            events "started", "failed"
+            exceptionFormat "short"
+        }
+    }
+}
+
+//---------------------------------------------------------------------------------------> Test suite for tags
+test {
+    useJUnitPlatform()
+}
+task regression(type: Test) {
+    useJUnitPlatform {
+        includeTags 'regression'
+    }
+}
+task onetest(type: Test) {
+    useJUnitPlatform {
+        includeTags 'onetest'
+    }
+}
